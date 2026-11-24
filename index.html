@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ko-KR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>쏘랑 탭 편집기</title>
+<link rel="icon" type="image/png" href="쏘랑.png" />
+<link rel="apple-touch-icon" href="쏘랑.png" />
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f3f5f9;
+    --line: #e4e8ef;
+    --line-2: #d3d9e3;
+    --text: #1b2230;
+    --muted: #6b7485;
+    --dim: #9aa3b2;
+    --accent: #2563eb;
+    --accent-2: #1d4fd8;
+    --accent-soft: #eaf1ff;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); overflow-y: scroll; }
+  body { margin: 0; min-width: 300px; color: var(--text); line-height: 1.5; }
+  main { max-width: 880px; margin: 0 auto; padding: 8px 20px 80px; }
+  .hidden { display: none !important; }
+  .invisible { visibility: hidden; }
+
+  .topbar { border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, .85); }
+  .topbar-inner { max-width: 880px; margin: 0 auto; padding: 16px 20px; display: flex; align-items: center; gap: 14px; }
+  .app-icon {
+    width: 46px; height: 46px; flex: none; border-radius: 13px;
+    display: grid; place-items: center; color: #fff;
+    background: linear-gradient(145deg, #4f8cff, #1f53e0);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, .3), inset 0 1px 0 rgba(255, 255, 255, .3);
+  }
+  .topbar h1 { font-size: 20px; letter-spacing: -0.02em; margin: 0; font-weight: 750; line-height: 1.3; }
+  .topbar p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .pro {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 15px; padding: 0 5px; margin: 0 1px 0 5px; border-radius: 4px; vertical-align: 1px;
+    background: var(--muted); color: #fff;
+    font-size: 9.5px; font-weight: 800; letter-spacing: .04em; line-height: 1;
+  }
+
+  .card {
+    background: #fff; border: 1px solid var(--line); border-radius: 16px;
+    padding: 22px; margin-top: 16px; box-shadow: 0 4px 18px rgba(20, 40, 80, .06);
+  }
+  .card.upload { padding: 16px 22px; }
+  .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .upload .card-head { margin-bottom: 12px; }
+  .card-head h2 { flex: 1; font-size: 16px; margin: 0; font-weight: 700; }
+  .step {
+    width: 24px; height: 24px; flex: none; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; line-height: 1;
+  }
+
+  #drop {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    padding: 14px 16px; border: 1.5px dashed #cfd6e2; border-radius: 12px;
+    background: #fafbfd; cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  #drop:hover { border-color: #9db8f0; background: #f7faff; }
+  #drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop-icon {
+    width: 38px; height: 38px; flex: none; border-radius: 10px;
+    display: grid; place-items: center; background: var(--accent-soft); color: var(--accent);
+  }
+  #drop strong { display: block; font-size: 14.5px; font-weight: 650; }
+  #drop small { display: block; color: var(--muted); font-size: 12.5px; }
+  .status { margin: 10px 2px 0; font-size: 13px; color: var(--muted); text-align: center; }
+  .status:empty { display: none; }
+  .status.ok { color: #7aa2f0; font-weight: 500; }
+  .status.error { color: #dc2626; }
+
+  .field { display: block; margin-bottom: 14px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .field > select { display: block; width: 100%; margin-top: 6px; }
+  .row { display: flex; gap: 6px; margin-top: 6px; }
+  .row > input, .row > select { flex: 1; min-width: 0; }
+  select, input[type=text] {
+    font: inherit; font-size: 14px; color: var(--text);
+    background: #fff; border: 1px solid var(--line-2); border-radius: 9px;
+    padding: 8px 11px; outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  select {
+    padding-right: 30px; appearance: none; cursor: pointer;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7485' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+  }
+  select:focus, input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+  input[type=text]:disabled { background: #f4f6f9; color: var(--dim); }
+  input::placeholder { color: var(--dim); }
+
+  button {
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    padding: 7px 12px; border-radius: 9px; border: 1px solid var(--line-2);
+    background: #fff; color: var(--text); transition: background .15s, border-color .15s, color .15s;
+  }
+  button:hover { background: #f5f8ff; border-color: #b9cdf6; color: var(--accent); }
+  button.subtle { color: var(--muted); font-weight: 500; }
+  button.subtle:hover { color: var(--text); }
+
+  .check { display: flex; align-items: center; gap: 7px; flex: none; padding: 0 2px 0 4px; font-size: 13px; color: var(--muted); white-space: nowrap; cursor: pointer; }
+  .check input {
+    appearance: none; margin: 0; width: 16px; height: 16px; flex: none; cursor: pointer;
+    border: 1.5px solid #c9d3e3; border-radius: 4px; background: #fff; transition: background-color .15s, border-color .15s;
+  }
+  .check input:checked {
+    border-color: #a9c2f5;
+    background: #a9c2f5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5 10 17 19 7.5'/%3E%3C/svg%3E") center / 12px no-repeat;
+  }
+
+  #channels { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #channels li {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px;
+    padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fafbfd;
+    transition: opacity .15s, background .15s, border-color .15s;
+  }
+  #channels li:hover { background: #f5f8ff; border-color: #d5e2fb; }
+  #channels li.excluded { opacity: .5; }
+  #channels li.excluded .ch-name { text-decoration: line-through; }
+  .ch-info { min-width: 0; }
+  .ch-name { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-weight: 650; font-size: 14.5px; word-break: break-all; }
+  .ch-name small { font-size: 11.5px; color: var(--dim); font-weight: 500; }
+  .ch-alias { margin-top: 2px; font-size: 12px; color: var(--dim); word-break: break-all; }
+  .ch-style { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+  .ch-style select { font-size: 13px; padding: 6px 28px 6px 10px; }
+  input[type=color] {
+    display: block; width: 26px; height: 26px; padding: 0; cursor: pointer;
+    border: 1px solid var(--line-2); border-radius: 7px; background: #fff;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; }
+  input[type=color]::-webkit-color-swatch { border: 0; border-radius: 4px; }
+  input[type=color]::-moz-color-swatch { border: 0; border-radius: 4px; }
+
+  .switch { position: relative; width: 38px; height: 22px; flex: none; cursor: pointer; }
+  .switch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 999px; background: #cfd6e2; transition: background .15s; }
+  .switch span::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); transition: transform .18s;
+  }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(16px); }
+  .switch input:focus-visible + span, .check input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; margin-bottom: 4px; }
+
+  .preview { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .preview-bar {
+    display: flex; align-items: center; gap: 8px; padding: 9px 14px;
+    border-bottom: 1px solid var(--line); background: #f7f9fc; font-size: 12.5px; color: var(--muted);
+  }
+  .preview-bar b {
+    display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 6px;
+    background: var(--accent-soft); color: var(--accent); font-size: 12px; line-height: 1;
+  }
+  #previewFrame { display: block; width: 100%; height: 460px; border: 0; background: #121212; }
+
+  .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+  .actions button { width: 180px; height: 46px; padding: 0 16px; font-size: 15px; font-weight: 700; }
+  .actions .primary { background: var(--accent); border-color: transparent; color: #fff; }
+  .actions .primary:hover { background: var(--accent-2); color: #fff; }
+
+  @media (max-width: 640px) {
+    #channels, .grid2 { grid-template-columns: 1fr; }
+    #channels li { grid-template-columns: auto minmax(0, 1fr); }
+    .ch-style { grid-column: 1 / -1; justify-content: flex-start; }
+    .topbar h1 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="app-icon" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/></svg>
+    </div>
+    <div>
+      <h1>쏘랑 탭 편집기</h1>
+      <p>HTML出力+<span class="pro">PRO</span>로 다운받은 파일에서 원하는 탭을 제외할 수 있습니다.</p>
+    </div>
+  </div>
+</header>
+<main>
+  <section class="card upload">
+    <div class="card-head">
+      <span class="step">1</span><h2>파일 업로드</h2>
+      <button type="button" id="clearFiles" class="subtle invisible">초기화</button>
+    </div>
+    <div id="drop" tabindex="0" role="button" aria-label="파일 선택">
+      <div class="drop-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M20 15v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4"/></svg>
+      </div>
+      <div>
+        <strong>.zip 또는 .html 파일 지원</strong>
+        <small>클릭하여 업로드도 가능</small>
+      </div>
+    </div>
+    <input id="file" type="file" accept=".zip,.html,.htm" multiple hidden />
+    <p id="status" class="status"></p>
+  </section>
+
+  <div id="panel" class="hidden">
+    <section class="card">
+      <div class="card-head">
+        <span class="step">2</span><h2>탭 설정</h2>
+        <button type="button" id="reset" class="subtle">초기화</button>
+      </div>
+      <label class="field" id="baseWrap">기준 로그 파일
+        <select id="base"></select>
+      </label>
+      <ul id="channels"></ul>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><span class="step">3</span><h2>추가 옵션 및 미리보기</h2></div>
+      <div class="grid2">
+        <div class="field">
+          <label for="title">로그 제목</label>
+          <div class="row">
+            <input type="text" id="title" placeholder="제목 없음" />
+            <label class="check"><input type="checkbox" id="removeTitle" checked />제목 삭제</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="labelMode">탭 이름 표시</label>
+          <div class="row">
+            <select id="labelMode">
+              <option value="badge">우측에 배지로 표시</option>
+              <option value="inline">원본 양식</option>
+              <option value="hidden">표시하지 않음</option>
+            </select>
+            <label class="check"><input type="checkbox" id="hideMain" checked />메인탭 이름 숨기기</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview">
+        <div class="preview-bar"><b>미리보기</b>상단 500개만 표시</div>
+        <iframe id="previewFrame" sandbox="" title="미리보기"></iframe>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="download" class="primary">HTML 다운로드</button>
+        <button type="button" id="preview">전체 미리보기</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+const LogCore = (() => {
+  const ARTICLE_RE = /\s*<article\b[^>]*>[\s\S]*?<\/article>/g;
+  const ARTICLE_END = "</article>";
+  const CHANNEL_ID_RE = /data-channel="([^"]*)"/;
+  const CHANNEL_NAME_RE = /<span class="channel-name">([\s\S]*?)<\/span>/;
+  const AVATAR_USE_RE = /\bavatar-image-(\d+)\b/g;
+  const AVATAR_SEL_RE = /^\.avatar-image-(\d+)$/;
+  const ROOT_SEL_RE = /^(?::root|html|body)$/;
+  const NESTED_AT_RULE_RE = /^@(?:media|supports|container)\b/;
+  const SCOPE = ".message-list";
+  const EDITED = "[편집 완료]";
+
+  const ENTITIES = { "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&amp;": "&" };
+  const decodeEntities = s => s.replace(/&(?:lt|gt|quot|#39|amp);|&#(\d+);/g, (e, n) => n ? String.fromCodePoint(+n) : ENTITIES[e]);
+  const escapeHtml = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const cssString = s => s.replace(/[\\"]/g, "\\$&").replace(/\n/g, "\\a ");
+  const isColor = c => /^#[0-9a-f]{3,8}$/i.test(c || "");
+  const channelOf = article => article.match(CHANNEL_ID_RE)?.[1] ?? "";
+
+  const decl = props => `\n${props.map(p => `        ${p};`).join("\n")}\n      `;
+  const HIDE = decl(["display: none"]);
+  const BADGE_RULES = [
+    [".message-header .channel-name", decl([
+      "margin-left: auto", "padding: 0 9px", "border: 1px solid rgba(255, 255, 255, 0.09)",
+      "border-radius: 999px", "background: rgba(255, 255, 255, 0.03)", "color: #6e6e6e",
+      "font-size: 11px", "line-height: 19px", "white-space: nowrap",
+    ])],
+    [".message.system", decl(["display: flex", "align-items: center", "gap: 12px"])],
+    [".message.system .message-text", decl(["flex: 1", "min-width: 0"])],
+    [".message.system .message-header", decl(["order: 2", "flex: none"])],
+  ];
+
+  function removeEdited(a) {
+    return a
+      .replace(/\r?\n[ \t]*(?:<span class="edited">)?\[편집 완료\](?:<\/span>)?[ \t]*(?=\r?\n)/g, "")
+      .replace(/(<div class="message-text">)\[편집 완료\]\r?\n?/g, "$1")
+      .replace(/<span class="edited">\[편집 완료\]<\/span>/g, "")
+      .replace(/ ?\[편집 완료\]/g, "");
+  }
+
+  function cleanArticle(a, stripBrackets) {
+    const isRoll = a.includes('class="roll-result');
+    if (stripBrackets) a = a.replace(/(<span class="channel-name">)\s*\[([\s\S]*?)\]\s*(<\/span>)/, "$1$2$3");
+    if (!isRoll && a.includes(EDITED)) a = removeEdited(a);
+    return a
+      .replace(/(<time class="timestamp"[^>]*>[^<]*?\d{1,2}:\d{2}):\d{2}(?=\s*<\/time>)/, "$1")
+      .replace(/(<div class="message-text">)([\s\S]*?)(<\/div>)/, (_, open, text, close) => {
+        const body = isRoll && !text.trim() ? "<span hidden>.</span>" : text.replace(/\r?\n/g, "<br>");
+        return open + body + close;
+      });
+  }
+
+  function analyze(html) {
+    const channels = new Map();
+    for (const [article] of html.matchAll(ARTICLE_RE)) {
+      const id = channelOf(article);
+      let ch = channels.get(id);
+      if (!ch) channels.set(id, ch = { id, count: 0, names: new Map(), first: channels.size });
+      ch.count++;
+      const nm = article.match(CHANNEL_NAME_RE);
+      if (nm) {
+        const name = decodeEntities(nm[1].trim()).replace(/^\[([\s\S]*)\]$/, "$1");
+        ch.names.set(name, (ch.names.get(name) || 0) + 1);
+      }
+    }
+    let total = 0;
+    const list = [...channels.values()].map(({ id, count, names, first }) => {
+      total += count;
+      const sorted = [...names].sort((a, b) => b[1] - a[1]).map(([n]) => n);
+      return { id, count, first, names: sorted, label: sorted[0] || id || "(이름 없음)" };
+    });
+    const title = html.match(/<title>([\s\S]*?)<\/title>/i);
+    return { title: title ? decodeEntities(title[1].trim()) : "", channels: list, total };
+  }
+
+  function tabRules(o, keptIds) {
+    const rules = o.labelMode === "badge" ? [...BADGE_RULES]
+      : o.labelMode === "hidden" ? [[".channel-name", HIDE]] : [];
+    if (o.labelMode !== "hidden" && o.hideMainLabel) rules.push(['.message[data-channel="main"] .channel-name', HIDE]);
+    for (const [id, { bg, fg, date }] of Object.entries(o.styles || {})) {
+      if (!keptIds.has(id)) continue;
+      const sel = `.message[data-channel="${cssString(id)}"]`;
+      const sys = `.message.system[data-channel="${cssString(id)}"]`;
+      if (isColor(bg)) {
+        rules.push([sel, decl(["margin: 0 -12px", "padding-right: 12px", "padding-left: 12px", `background: ${bg}`])]);
+        rules.push([sys, decl(["padding-left: 64px"])]);
+      }
+      if (isColor(fg)) rules.push([`${sel} .message-text,\n      ${sys}`, decl([`color: ${fg}`])]);
+      if (isColor(date)) rules.push([`${sel} .timestamp`, decl([`color: ${date}`])]);
+    }
+    return rules;
+  }
+
+  function parseCss(css) {
+    const rules = [];
+    let depth = 0, start = 0, open = 0;
+    css = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    for (let i = 0; i < css.length; i++) {
+      if (css[i] === "{") {
+        if (depth++ === 0) open = i;
+      } else if (css[i] === "}" && depth && --depth === 0) {
+        rules.push([css.slice(start, open).trim(), css.slice(open + 1, i)]);
+        start = i + 1;
+      }
+    }
+    return rules;
+  }
+
+  const scopeSelector = sel => sel.split(",").map(part => {
+    const s = part.trim();
+    if (ROOT_SEL_RE.test(s)) return SCOPE;
+    if (s === "*") return `${SCOPE}, ${SCOPE} *`;
+    return s.startsWith(SCOPE) ? s : `${SCOPE} ${s}`;
+  }).join(",\n      ");
+
+  const cssText = (rules, indent = "") =>
+    rules.map(([sel, body]) => `\n      ${sel} {${body}}`).join("\n").replace(/\n/g, `\n${indent}`) + `\n${indent}    `;
+
+  function scopeRule([sel, body]) {
+    if (NESTED_AT_RULE_RE.test(sel)) return [sel, cssText(parseCss(body).map(scopeRule), "  ")];
+    return sel.startsWith("@") ? [sel, body] : [scopeSelector(sel), body];
+  }
+
+  function splitStyle(css, usedAvatars) {
+    const head = [], body = [];
+    let pruned = 0;
+    for (const rule of parseCss(css)) {
+      const avatar = rule[0].match(AVATAR_SEL_RE);
+      if (avatar) {
+        if (usedAvatars.has(avatar[1])) head.push(rule);
+        else pruned++;
+        continue;
+      }
+      if (ROOT_SEL_RE.test(rule[0]) || rule[0] === "*") head.push(rule);
+      body.push(scopeRule(rule));
+    }
+    return { head, body, pruned };
+  }
+
+  function relocateStyle(html, extraRules) {
+    const style = html.match(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/i);
+    if (!style) return { html, pruned: 0 };
+    const before = html.slice(0, style.index);
+    let after = html.slice(style.index + style[0].length);
+    const used = new Set(Array.from(after.matchAll(AVATAR_USE_RE), m => m[1]));
+    const { head, body, pruned } = splitStyle(style[2], used);
+    body.push(...extraRules.map(scopeRule));
+
+    const anchor = after.match(/<main\b[^>]*class="[^"]*message-list[^"]*"[^>]*>|<body\b[^>]*>/i);
+    if (anchor) {
+      const at = anchor.index + anchor[0].length;
+      after = `${after.slice(0, at)}\n      <style>${cssText(body, "  ")}</style>${after.slice(at)}`;
+    }
+    return { html: before + style[1] + cssText(head) + style[3] + after, pruned };
+  }
+
+  function applyTitle(html, o) {
+    const setTitle = t => html.replace(/(<title>)[\s\S]*?(<\/title>)/i, `$1${escapeHtml(t)}$2`);
+    if (o.removeTitle) {
+      html = html.replace(/\s*<h1 class="log-title">[\s\S]*?<\/h1>/i, "");
+      return o.tabTitle ? setTitle(o.tabTitle) : html;
+    }
+    if (!o.title) return html;
+    return setTitle(o.title).replace(/(<h1 class="log-title">)[\s\S]*?(<\/h1>)/i, `$1${escapeHtml(o.title)}$2`);
+  }
+
+  function build(html, excluded, o = {}) {
+    const keptIds = new Set();
+    const parts = [];
+    let pos = 0, removed = 0, kept = 0;
+    ARTICLE_RE.lastIndex = 0;
+    for (let m; (m = ARTICLE_RE.exec(html));) {
+      if (o.limit && kept >= o.limit) {
+        pos = html.lastIndexOf(ARTICLE_END) + ARTICLE_END.length;
+        break;
+      }
+      parts.push(html.slice(pos, m.index));
+      pos = ARTICLE_RE.lastIndex;
+      const id = channelOf(m[0]);
+      if (excluded.has(id)) { removed++; continue; }
+      kept++;
+      keptIds.add(id);
+      parts.push(cleanArticle(m[0], o.labelMode === "badge"));
+    }
+    parts.push(html.slice(pos));
+
+    const styled = relocateStyle(parts.join(""), tabRules(o, keptIds));
+    return { html: applyTitle(styled.html, o), removed, prunedImages: styled.pruned };
+  }
+
+  return { analyze, build };
+})();
+
+const ZipReader = (() => {
+  const EOCD = 0x06054b50, ZIP64_LOCATOR = 0x07064b50, CENTRAL_FILE = 0x02014b50;
+  const utf8 = new TextDecoder();
+  const utf8Strict = new TextDecoder("utf-8", { fatal: true });
+
+  function decodeName(bytes, isUtf8) {
+    if (isUtf8) return utf8.decode(bytes);
+    try { return utf8Strict.decode(bytes); } catch { return new TextDecoder("euc-kr").decode(bytes); }
+  }
+
+  async function inflate(bytes) {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  function list(buffer) {
+    const u8 = new Uint8Array(buffer);
+    const dv = new DataView(buffer);
+    const u16 = o => dv.getUint16(o, true);
+    const u32 = o => dv.getUint32(o, true);
+    const u64 = o => Number(dv.getBigUint64(o, true));
+
+    let eocd = u8.length - 22;
+    while (eocd >= Math.max(0, u8.length - 65557) && u32(eocd) !== EOCD) eocd--;
+    if (eocd < 0 || u32(eocd) !== EOCD) throw new Error("zip 파일 형식을 읽을 수 없어요.");
+
+    let count = u16(eocd + 10);
+    let p = u32(eocd + 16);
+    if ((p === 0xffffffff || count === 0xffff) && eocd >= 20 && u32(eocd - 20) === ZIP64_LOCATOR) {
+      const z64 = u64(eocd - 12);
+      count = u64(z64 + 32);
+      p = u64(z64 + 48);
+    }
+
+    const entries = [];
+    for (let i = 0; i < count && u32(p) === CENTRAL_FILE; i++) {
+      const flags = u16(p + 8), method = u16(p + 10);
+      const nameLen = u16(p + 28), extraLen = u16(p + 30), commentLen = u16(p + 32);
+      let size = u32(p + 20), offset = u32(p + 42);
+      const name = decodeName(u8.subarray(p + 46, p + 46 + nameLen), flags & 0x800);
+
+      for (let e = p + 46 + nameLen, end = e + extraLen; e + 4 <= end; e += 4 + u16(e + 2)) {
+        if (u16(e) !== 0x0001) continue;
+        let q = e + 4;
+        if (u32(p + 24) === 0xffffffff) q += 8;
+        if (size === 0xffffffff) { size = u64(q); q += 8; }
+        if (offset === 0xffffffff) offset = u64(q);
+      }
+      p += 46 + nameLen + extraLen + commentLen;
+
+      if (name.endsWith("/")) continue;
+      entries.push({
+        name,
+        async text() {
+          if (flags & 1) throw new Error("암호가 걸린 zip은 지원하지 않아요.");
+          const start = offset + 30 + u16(offset + 26) + u16(offset + 28);
+          const data = u8.subarray(start, start + size);
+          if (method === 0) return utf8.decode(data);
+          if (method === 8) return utf8.decode(await inflate(data));
+          throw new Error(`지원하지 않는 압축 방식(${method})이에요.`);
+        },
+      });
+    }
+    return entries;
+  }
+
+  return { list };
+})();
+
+(() => {
+  const $ = id => document.getElementById(id);
+  const drop = $("drop"), fileInput = $("file"), statusEl = $("status");
+  const panel = $("panel"), baseWrap = $("baseWrap"), baseSel = $("base"), listEl = $("channels");
+  const titleIn = $("title"), removeTitleCb = $("removeTitle");
+  const labelModeSel = $("labelMode"), hideMainCb = $("hideMain");
+  const frame = $("previewFrame"), clearBtn = $("clearFiles");
+
+  const PRESETS = {
+    personal: { bg: "#1f1f1f", fg: "#9e9e9e", date: "#666666" },
+    info: { bg: "#1f1f1f", fg: "#ffffff" },
+  };
+  const PRESET_OPTIONS = [["default", "기본"], ["personal", "개인 탭"], ["info", "정보 탭"], ["custom", "직접 설정"]];
+  const CUSTOM_DEFAULT = { bg: "#1b2230", fg: "#d7dcef" };
+  const GROUP = { main: 0, info: 1, other: 2, custom: 3, secret: 4 };
+  const SECRET_RE = /비밀|귓속말|秘密|secret|whisper/i;
+  const PREVIEW_LIMIT = 500;
+  const collator = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
+
+  let docs = [];
+  let current = null;
+  let state = new Map();
+  let previewTimer = 0;
+
+  const setStatus = (msg = "", kind = "") => { statusEl.textContent = msg; statusEl.className = `status ${kind}`; };
+  const isHtml = n => /\.html?$/i.test(n);
+  const baseName = n => n.split(/[\\/]/).pop();
+  const cleanTitle = t => t.replace(/\s*[\[［]\s*(?:すべて|全て)\s*[\]］]\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+  const el = (tag, props = {}, ...children) => {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...children);
+    return node;
+  };
+
+  const groupOf = ch => ["main", "info", "other"].includes(ch.id) ? GROUP[ch.id]
+    : ch.names.some(n => SECRET_RE.test(n)) ? GROUP.secret
+    : GROUP.custom;
+
+  function defaultState(ch) {
+    const group = groupOf(ch);
+    const preset = group === GROUP.custom || group === GROUP.secret ? "personal"
+      : group === GROUP.info ? "info"
+      : "default";
+    return { include: group !== GROUP.other && group !== GROUP.secret, preset, custom: { ...CUSTOM_DEFAULT } };
+  }
+
+  const lookOf = st => st.preset === "custom" ? st.custom : PRESETS[st.preset];
+
+  async function readFiles(files) {
+    const out = [];
+    for (const f of files) {
+      if (/\.zip$/i.test(f.name) || f.type.includes("zip")) {
+        for (const entry of ZipReader.list(await f.arrayBuffer())) {
+          const name = baseName(entry.name);
+          if (isHtml(name) && !name.startsWith("._")) out.push({ name, html: await entry.text() });
+        }
+      } else if (isHtml(f.name)) {
+        out.push({ name: f.name, html: await f.text() });
+      }
+    }
+    return out;
+  }
+
+  async function loadFiles(files) {
+    if (!files.length) return;
+    setStatus("불러오는 중…");
+    let loaded;
+    try {
+      loaded = await readFiles(files);
+    } catch (err) {
+      setStatus(err.message || "파일을 읽지 못했어요.", "error");
+      return;
+    }
+    docs = loaded
+      .map(d => ({ ...d, info: LogCore.analyze(d.html) }))
+      .filter(d => d.info.total)
+      .sort((a, b) => b.info.channels.length - a.info.channels.length || b.info.total - a.info.total);
+
+    if (!docs.length) {
+      setStatus("로그 메시지가 들어 있는 HTML 파일을 찾지 못했어요.", "error");
+      return;
+    }
+
+    baseSel.replaceChildren(...docs.map((d, i) => el("option", {
+      value: i,
+      textContent: `${d.name} · 탭 ${d.info.channels.length}개 · 메시지 ${d.info.total.toLocaleString()}개`,
+    })));
+    baseWrap.classList.toggle("hidden", docs.length < 2);
+    selectDoc(0);
+
+    const merged = docs[0].info.channels.length > 1 || docs.length === 1;
+    setStatus(merged
+      ? `✓ HTML ${docs.length}개를 불러왔어요.`
+      : `HTML ${docs.length}개를 불러왔어요. 모든 탭이 합쳐진 [すべて] 파일이 없어요. 기준 파일을 확인해 주세요.`,
+      merged ? "ok" : "");
+    panel.classList.remove("hidden");
+    clearBtn.classList.remove("invisible");
+  }
+
+  function resetTitle(value) {
+    titleIn.value = value;
+    titleIn.disabled = removeTitleCb.checked = true;
+  }
+
+  function selectDoc(i) {
+    current = docs[i];
+    resetTitle(cleanTitle(current.info.title));
+    state = new Map(current.info.channels.map(ch => [ch.id, defaultState(ch)]));
+    renderList();
+  }
+
+  function renderItem(ch) {
+    const st = state.get(ch.id);
+    const li = el("li", { className: st.include ? "" : "excluded" });
+
+    const toggle = el("input", { type: "checkbox", checked: st.include, ariaLabel: `${ch.label} 포함` });
+    toggle.addEventListener("change", () => {
+      st.include = toggle.checked;
+      li.classList.toggle("excluded", !st.include);
+      refresh();
+    });
+
+    const info = el("div", { className: "ch-info" },
+      el("div", { className: "ch-name" }, ch.label, el("small", { textContent: `${ch.count.toLocaleString()}개` })));
+    if (ch.names.length > 1) {
+      info.append(el("div", { className: "ch-alias", textContent: `다른 이름 · ${ch.names.slice(1).join(", ")}` }));
+    }
+
+    const colorInput = (key, label) => {
+      const input = el("input", { type: "color", value: st.custom[key], title: label, ariaLabel: label });
+      input.addEventListener("input", () => { st.custom[key] = input.value; refresh(); });
+      return input;
+    };
+    const colors = [colorInput("bg", "배경"), colorInput("fg", "글자")];
+    const showColors = () => colors.forEach(c => c.classList.toggle("hidden", st.preset !== "custom"));
+    showColors();
+
+    const select = el("select", { ariaLabel: `${ch.label} 양식` },
+      ...PRESET_OPTIONS.map(([value, textContent]) => el("option", { value, textContent })));
+    select.value = st.preset;
+    select.addEventListener("change", () => { st.preset = select.value; showColors(); refresh(); });
+
+    li.append(
+      el("label", { className: "switch", title: "로그에 포함" }, toggle, el("span")),
+      info,
+      el("div", { className: "ch-style" }, ...colors, select),
+    );
+    return li;
+  }
+
+  function renderList() {
+    const sorted = [...current.info.channels].sort((a, b) =>
+      groupOf(a) - groupOf(b) || collator.compare(a.label, b.label) || a.first - b.first);
+    listEl.replaceChildren(...sorted.map(renderItem));
+    refresh();
+  }
+
+  function buildLog(limit) {
+    const excluded = new Set();
+    const styles = {};
+    for (const [id, st] of state) {
+      if (!st.include) excluded.add(id);
+      const look = lookOf(st);
+      if (look) styles[id] = look;
+    }
+    const title = titleIn.value.trim();
+    return LogCore.build(current.html, excluded, {
+      limit,
+      title,
+      removeTitle: removeTitleCb.checked || !title,
+      tabTitle: cleanTitle(current.info.title),
+      labelMode: labelModeSel.value,
+      hideMainLabel: hideMainCb.checked,
+      styles,
+    });
+  }
+
+  function refresh() {
+    if (!current) return;
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => { frame.srcdoc = buildLog(PREVIEW_LIMIT).html; }, 120);
+  }
+
+  function fileName() {
+    const t = titleIn.value.trim().replace(/[\\/:*?"<>|]+/g, "_");
+    if (!t) return `${cleanTitle(current.name.replace(/\.html?$/i, ""))}.html`;
+    return isHtml(t) ? t : `${t}.html`;
+  }
+
+  function openHtml(html, download) {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    if (download) {
+      const a = el("a", { href: url, download });
+      document.body.append(a);
+      a.click();
+      a.remove();
+    } else {
+      window.open(url, "_blank");
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return blob.size;
+  }
+
+  function clearAll() {
+    docs = [];
+    current = null;
+    state = new Map();
+    clearTimeout(previewTimer);
+    listEl.replaceChildren();
+    baseSel.replaceChildren();
+    resetTitle("");
+    frame.removeAttribute("srcdoc");
+    panel.classList.add("hidden");
+    clearBtn.classList.add("invisible");
+    setStatus();
+  }
+
+  $("download").addEventListener("click", () => {
+    const { html, removed, prunedImages } = buildLog();
+    const mb = (openHtml(html, fileName()) / 1048576).toFixed(1);
+    setStatus(`✓ 메시지 ${removed.toLocaleString()}개, 이미지 ${prunedImages}개를 빼고 다운로드했어요. (${mb}MB)`, "ok");
+  });
+  $("preview").addEventListener("click", () => openHtml(buildLog().html));
+  $("reset").addEventListener("click", () => selectDoc(+baseSel.value));
+  clearBtn.addEventListener("click", clearAll);
+  baseSel.addEventListener("change", () => selectDoc(+baseSel.value));
+  removeTitleCb.addEventListener("change", () => { titleIn.disabled = removeTitleCb.checked; refresh(); });
+  titleIn.addEventListener("input", refresh);
+  labelModeSel.addEventListener("change", refresh);
+  hideMainCb.addEventListener("change", refresh);
+
+  drop.addEventListener("click", () => fileInput.click());
+  drop.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+  });
+  fileInput.addEventListener("change", () => { loadFiles([...fileInput.files]); fileInput.value = ""; });
+  drop.addEventListener("dragover", () => drop.classList.add("over"));
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  window.addEventListener("dragover", e => e.preventDefault());
+  window.addEventListener("drop", e => {
+    e.preventDefault();
+    drop.classList.remove("over");
+    loadFiles([...e.dataTransfer.files]);
+  });
+})();
+</script>
+</body>
+</html>

@@ -277,8 +277,7 @@ const LogCore = (() => {
   const BOARD_SCOPE = `.session_logue_wrap ${SCOPE}`;
   const TYPE_RESET = [
     [BOARD_SCOPE, decl([
-      'font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK KR", sans-serif',
-      "font-size: 16px", "font-weight: normal", "font-style: normal", "line-height: normal",
+      "font-family: initial", "font-size: 16px", "font-weight: normal", "font-style: normal", "line-height: normal",
       "letter-spacing: normal", "word-spacing: normal", "text-align: left", "text-transform: none", "text-shadow: none",
     ])],
     [`${BOARD_SCOPE} *`, decl([
@@ -420,6 +419,7 @@ const LogCore = (() => {
     body.unshift(...RESET_RULES);
     body.push(...extraRules.map(scopeRule));
 
+    after = after.replace(/<main\b(?![^>]*\blang=)([^>]*class="[^"]*message-list[^"]*")/i, '<main lang="ko-KR"$1');
     const anchor = after.match(/<main\b[^>]*class="[^"]*message-list[^"]*"[^>]*>|<body\b[^>]*>/i);
     if (anchor) {
       const at = anchor.index + anchor[0].length;

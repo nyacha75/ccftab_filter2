@@ -274,6 +274,24 @@ const LogCore = (() => {
 
   const decl = props => `\n${props.map(p => `        ${p};`).join("\n")}\n      `;
   const HIDE = decl(["display: none"]);
+  const BOARD_SCOPE = `.session_logue_wrap ${SCOPE}`;
+  const TYPE_RESET = [
+    [BOARD_SCOPE, decl([
+      'font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK KR", sans-serif',
+      "font-size: 16px", "font-weight: normal", "font-style: normal", "line-height: normal",
+      "letter-spacing: normal", "word-spacing: normal", "text-align: left", "text-transform: none", "text-shadow: none",
+    ])],
+    [`${BOARD_SCOPE} *`, decl([
+      "font-family: inherit", "font-size: inherit", "font-weight: inherit", "font-style: inherit",
+      "line-height: inherit", "letter-spacing: inherit", "word-spacing: inherit",
+      "text-transform: inherit", "text-shadow: inherit",
+    ])],
+    [`${BOARD_SCOPE} h1`, decl(["font-weight: bold"])],
+  ];
+  const RESET_RULES = [
+    [SCOPE, decl(["font: initial", "letter-spacing: normal", "word-spacing: normal", "word-break: normal", "text-align: left", "text-transform: none", "text-shadow: none"])],
+    [`${SCOPE} *`, decl(["font-family: inherit"])],
+  ];
   const BADGE_RULES = [
     [".message-header .channel-name", decl([
       "margin-left: auto", "padding: 0 9px", "border: 1px solid rgba(255, 255, 255, 0.09)",
@@ -377,7 +395,7 @@ const LogCore = (() => {
   }
 
   function splitStyle(css, usedAvatars) {
-    const head = [], body = [];
+    const head = [], body = [...TYPE_RESET];
     let pruned = 0;
     for (const rule of parseCss(css)) {
       const avatar = rule[0].match(AVATAR_SEL_RE);
@@ -399,6 +417,7 @@ const LogCore = (() => {
     let after = html.slice(style.index + style[0].length);
     const used = new Set(Array.from(after.matchAll(AVATAR_USE_RE), m => m[1]));
     const { head, body, pruned } = splitStyle(style[2], used);
+    body.unshift(...RESET_RULES);
     body.push(...extraRules.map(scopeRule));
 
     const anchor = after.match(/<main\b[^>]*class="[^"]*message-list[^"]*"[^>]*>|<body\b[^>]*>/i);
